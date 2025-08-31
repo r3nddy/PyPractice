@@ -10,3 +10,6 @@ elif operand == "-":
 
 elif operand == "*":
     print(f"hasil : {angka_1} * {angka_2} = { angka_1 * angka_2}")
+
+elif operand == "/":
+    print(f"hasil : {angka_1} * {angka_2} = { angka_1 / angka_2}")
