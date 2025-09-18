@@ -13,11 +13,18 @@ def luas_layang_layang(diagonal_1: float, diagonal_2: float) -> float:
     return 0.5 * diagonal_1 * diagonal_2
 
 def main():
-    print("=== menghitung luas bangun datar ===")
-    print("1.lingkaran")
-    print("2.persegi panjang")
-    print("3.segitiga")
-    print("4.layang layang")
+  
+    menu: dict = {
+        "1" : "lingkaran",
+        "2" : "persegi panjang",
+        "3" : "segitiga",
+        "4" : "layang layang"
+    }
+     
+    print("Program menghitung luas bangun datar")
+
+    for key, value in menu.items():
+        print(f"{key}.{value}")
 
     pilihan = input("Masukkan bangun ruang : (1/2/3/4)")
 
