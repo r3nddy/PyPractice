@@ -14,11 +14,17 @@ total_pesanan = 0
 
 
 print("=== Daftar Menu ===")
-print(f"1. {espresso_nama} : Rp {espresso_harga}")
-print(f"2. {americano_nama} : Rp {americano_harga}")
-print(f"3. {cappuccino_nama} : Rp {cappuccino_harga} (Promo Diskon 10%!!!)")
-print(f"4. {latte_nama} : Rp {latte_harga}")
-print("0. Selesai")
+print("+----+---------------+---------------+")
+print("| No | Nama          | Harga         |")
+print("+----+---------------+---------------+")
+print("| 1  | Espresso      | Rp 15000      |")
+print("| 2  | Americano     | Rp 18000      |")
+print("| 3  | Cappuccino    | Rp 22000      | <- Promo Diskon 10%!!!")
+print("| 4  | Latte         | Rp 23000      |")
+print("+----+---------------+---------------+")
+print("| 0  | Selesai       |               |")
+print("+----+---------------+---------------+")
+
 
 while True:
     pilihan = int(input("Pilih Menu : "))
