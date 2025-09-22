@@ -22,12 +22,17 @@ print("| 2  | Americano     | Rp18.000      |")
 print("| 3  | Cappuccino    | Rp22.000      | <- Promo Diskon 10%!!!")
 print("| 4  | Latte         | Rp23.000      |")
 print("+----+---------------+---------------+")
+print("| 0  | Selesai       |               |")
+print("+----+---------------+---------------+")
 
 
 while True:
     pilihan = int(input("Pilih Menu : "))
+    
+    if pilihan == 0:
+        break
 
-    if pilihan == 1:
+    elif pilihan == 1:
         jumlah = int(input("Jumlah pesanan: "))
         harga_pesanan = espresso_harga * jumlah
         total_pesanan += harga_pesanan
@@ -58,9 +63,5 @@ while True:
     else:
         print("Pilihan tidak valid.")
         continue
-
-    lagi = input("Apakah Anda ingin memesan lagi? (y/n): ").lower()
-    if lagi != "y":
-        break
 
 print(f"\nTotal yang harus dibayar: Rp{total_pesanan}")
