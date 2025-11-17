@@ -875,29 +875,20 @@ def main_menu():
     
     # ✅ MENU UNTUK ADMIN
     if current_level == "admin":
-        table.add_row(["", "--- Informasi Pasar ---"])
         table.add_row(["1", "📊 Lihat Harga Pasar (Live)"])
-        table.add_row(["", "--- Manajemen Koin ---"])
         table.add_row(["2", "⚙️  Listing Koin Baru (CRUD)"])
-        table.add_row(["", "--- Monitoring ---"])
         table.add_row(["3", "📜 Lihat Semua Transaksi (All Users)"])
-        table.add_row(["", "--- Sistem ---"])
         table.add_row(["0", "🚪 Keluar & Hapus Sesi"])
     
-    # ✅ MENU UNTUK USER BIASA
+    # ✅ MENU UNTUK USER
     else:
-        table.add_row(["", "--- Informasi Pasar ---"])
         table.add_row(["1", "📊 Lihat Harga Pasar (Live)"])
-        table.add_row(["", "--- Manajemen Akun ---"])
         table.add_row(["2", "💼 Exchange & Wallet"])
-        table.add_row(["", "--- Eksekusi Trading ---"])
-        table.add_row(["3", "💰 BUY (Beli Instant)"])
-        table.add_row(["4", "💸 SELL (Jual Instant)"])
-        table.add_row(["", "--- Riwayat & Analisis ---"])
+        table.add_row(["3", "💰 BUY "])
+        table.add_row(["4", "💸 SELL "])
         table.add_row(["5", "📜 Lihat Riwayat Transaksi Saya"])
-        table.add_row(["", "--- Sistem ---"])
         table.add_row(["0", "🚪 Keluar & Hapus Sesi"])
-    
+
     print(table)
 
 
@@ -1186,51 +1177,141 @@ def view_wallet():
 # ==================== ORDER FUNCTIONS ====================
 
 def create_buy_order():
-    """Buat order beli"""
+    """Buat order beli dengan tampilan market prices yang menarik"""
     clear_screen()
     print_modern_header()
-    print("=== BUKA ORDER BELI ===\n")
     
-    print("🔄 Memperbarui harga dari API...\n")
-    update_market_prices_from_api()
+    # Header
+    header = PrettyTable()
+    header.field_names = ["💰 BUY ORDER - INSTANT PURCHASE 💰"]
+    header.add_row(["Beli cryptocurrency dengan harga pasar terkini"])
+    print(header)
+    print()
     
-    print("Harga Pasar Terkini:")
-    for symbol, price in list(db["market_prices"].items())[:8]:
-        print(f"  {symbol}: ${price:,.4f}")
+    # Update harga dari API
+    print("🔄 Mengambil data harga real-time dari CoinGecko...")
+    update_result = update_market_prices_from_api()
+    if update_result:
+        print("✓ Harga pasar berhasil diperbarui dari API!\n")
+    else:
+        print("⚠️ Menggunakan harga terakhir dari database\n")
     
-    print("\n")
-    crypto = input("Crypto yang ingin dibeli (misal: BTC): ").upper().strip()
+    # Tampilkan harga pasar dengan PrettyTable
+    market_table = PrettyTable()
+    market_table.field_names = ["No", "Crypto", "Symbol", "Price (USD)", "Status"]
+    market_table.hrules = 1 
     
-    if crypto not in db["market_prices"]:
-        print(f"\n✗ {crypto} tidak tersedia di pasar")
+    # Tambahkan crypto dari API
+    coin_list = []
+    for i, (symbol, price) in enumerate(list(db["market_prices"].items())[:8], 1):
+        # Cari nama lengkap
+        crypto_name = symbol
+        for crypto_id, info in CRYPTO_DISPLAY_MAP.items():
+            if info['symbol'] == symbol:
+                crypto_name = info['name']
+                break
+        
+        market_table.add_row([
+            i,
+            crypto_name,
+            symbol,
+            f"${price:,.4f}",
+            "🟢 Live"
+        ])
+        coin_list.append(symbol)
+    
+    # Tambahkan koin lokal
+    for coin in db.get("local_coins", []):
+        i += 1
+        market_table.add_row([
+            i,
+            coin["name"],
+            coin["symbol"],
+            f"${coin.get('price', 0):,.4f}",
+            "🔵 Local"
+        ])
+        coin_list.append(coin["symbol"])
+    
+    market_table.align["No"] = "c"
+    market_table.align["Crypto"] = "l"
+    market_table.align["Symbol"] = "c"
+    market_table.align["Price (USD)"] = "r"
+    market_table.align["Status"] = "c"
+    
+    print(market_table)
+    print()
+    
+    # Info Wallet
+    wallet = get_wallet()
+    usdt_balance = wallet.get("USDT", 0)
+    
+    wallet_info = PrettyTable()
+    wallet_info.field_names = ["💼 YOUR WALLET"]
+    wallet_info.hrules = 1
+    wallet_info.add_row([f"USDT Balance: ${usdt_balance:,.2f}"])
+    print(wallet_info)
+    print()
+    
+    # Input
+    print("─" * 60)
+    crypto = input(" 🪙  Crypto yang ingin dibeli (Symbol): ").upper().strip()
+    
+    if crypto not in coin_list:
+        print(f"\n❌ {crypto} tidak tersedia di pasar")
         pause()
         return
     
     try:
-        amount = float(input(f"Jumlah {crypto}: "))
-        price = db["market_prices"][crypto]
-        total_cost = amount * price
+        amount = float(input(f"📦 Jumlah {crypto}: "))
         
-        wallet = get_wallet()
-        usdt_balance = wallet.get("USDT", 0)
-        
-        print(f"\n{'='*50}")
-        print(f"Ringkasan Order BELI:")
-        print(f"Crypto    : {crypto}")
-        print(f"Jumlah    : {amount:.8f} {crypto}")
-        print(f"Harga     : ${price:,.4f}")
-        print(f"Total     : ${total_cost:,.2f} USDT")
-        print(f"Saldo USDT: ${usdt_balance:,.2f}")
-        print(f"{'='*50}")
-        
-        if total_cost > usdt_balance:
-            print("\n✗ Saldo USDT tidak cukup!")
+        if amount <= 0:
+            print("\n❌ Jumlah harus lebih dari 0!")
             pause()
             return
         
-        confirm = input("\nKonfirmasi order? (y/n): ").lower()
+        price = db["market_prices"].get(crypto, 0)
+        total_cost = amount * price
+        
+        # Preview Order dengan PrettyTable
+        print()
+        preview = PrettyTable()
+        preview.field_names = ["📋 ORDER SUMMARY", ""]
+        preview.add_row(["Crypto", crypto])
+        preview.add_row(["Amount", f"{amount:.8f} {crypto}"])
+        preview.add_row(["Price", f"${price:,.4f}"])
+        preview.add_row(["─────────", "─────────"])
+        preview.add_row(["💳 Total Cost", f"${total_cost:,.2f} USDT"])
+        preview.add_row(["💰 Your Balance", f"${usdt_balance:,.2f} USDT"])
+        
+        if total_cost <= usdt_balance:
+            remaining = usdt_balance - total_cost
+            preview.add_row(["✅ Remaining", f"${remaining:,.2f} USDT"])
+        else:
+            deficit = total_cost - usdt_balance
+            preview.add_row(["❌ Deficit", f"${deficit:,.2f} USDT"])
+        
+        preview.align["📋 ORDER SUMMARY"] = "l"
+        preview.hrules = 1 
+        preview.align[""] = "r"
+        print(preview)
+        print()
+        
+        # Validasi saldo
+        if total_cost > usdt_balance:
+            error = PrettyTable()
+            error.field_names = ["❌ INSUFFICIENT BALANCE"]
+            error.hrules = 1
+            error.add_row([f"You need ${total_cost - usdt_balance:,.2f} more USDT"])
+            error.add_row(["Please deposit or reduce amount"])
+            print(error)
+            pause()
+            return
+        
+        # Konfirmasi
+        confirm = input("✅ Konfirmasi order BUY? (y/n): ").lower()
         
         if confirm == 'y':
+            # Eksekusi order
             wallet["USDT"] -= total_cost
             wallet[crypto] = wallet.get(crypto, 0) + amount
             
@@ -1249,62 +1330,162 @@ def create_buy_order():
             db["transactions"].append(transaction)
             save_database()
             
-            print("\n✓ Order BELI berhasil dieksekusi!")
+            # Success message
+            print()
+            success = PrettyTable()
+            success.field_names = ["✅ ORDER EXECUTED SUCCESSFULLY"]
+            success.hrules = 1
+            success.add_row([f"Bought {amount:.8f} {crypto}"])
+            success.add_row([f"Total: ${total_cost:,.2f} USDT"])
+            success.add_row([f"Transaction ID: #{transaction['id']}"])
+            print(success)
         else:
-            print("\n✗ Order dibatalkan")
+            print()
+            cancel = PrettyTable()
+            cancel.field_names = ["❌ ORDER CANCELLED"]
+            cancel.hrules = 1
+            cancel.add_row(["Transaction has been cancelled"])
+            print(cancel)
             
     except ValueError:
-        print("\n✗ Input tidak valid!")
+        print("\n❌ Input tidak valid!")
+    except Exception as e:
+        print(f"\n❌ Error: {e}")
     
     pause()
 
 def create_sell_order():
-    """Buat order jual"""
+    """Buat order jual dengan tampilan portfolio yang menarik"""
     clear_screen()
     print_modern_header()
-    print("=== BUKA ORDER JUAL ===\n")
     
-    print("🔄 Memperbarui harga dari API...\n")
-    update_market_prices_from_api()
+    # Header
+    header = PrettyTable()
+    header.field_names = ["💸 SELL ORDER - INSTANT SELL 💸"]
+    header.add_row(["Jual cryptocurrency Anda dengan harga pasar terkini"])
+    print(header)
+    print()
+    
+    # Update harga dari API
+    print("🔄 Mengambil data harga real-time dari CoinGecko...")
+    update_result = update_market_prices_from_api()
+    if update_result:
+        print("✓ Harga pasar berhasil diperbarui dari API!\n")
+    else:
+        print("⚠️ Menggunakan harga terakhir dari database\n")
     
     wallet = get_wallet()
     
-    print("Aset Anda:")
+    # Tampilkan portfolio (aset yang dimiliki)
+    portfolio_table = PrettyTable()
+    portfolio_table.field_names = ["No", "Crypto", "Your Balance", "Current Price", "Total Value"]
+    portfolio_table.hrules = 1
+    
+    available_cryptos = []
+    portfolio_items = []
+    
     for crypto, balance in wallet.items():
         if crypto != "USDT" and balance > 0:
             price = db["market_prices"].get(crypto, 0)
-            print(f"  {crypto}: {balance:.8f} (Harga: ${price:,.4f})")
+            total_value = balance * price
+            portfolio_items.append((crypto, balance, price, total_value))
+            available_cryptos.append(crypto)
     
-    print("\n")
-    crypto = input("Crypto yang ingin dijual: ").upper().strip()
+    if not available_cryptos:
+        print("❌ Anda tidak memiliki cryptocurrency untuk dijual")
+        print("💡 Silakan beli terlebih dahulu di menu BUY\n")
+        pause()
+        return
     
-    if crypto not in wallet or wallet[crypto] <= 0:
-        print(f"\n✗ Anda tidak memiliki {crypto}")
+    # Sort by total value (highest first)
+    portfolio_items.sort(key=lambda x: x[3], reverse=True)
+    
+    for i, (crypto, balance, price, total_value) in enumerate(portfolio_items, 1):
+        portfolio_table.add_row([
+            i,
+            crypto,
+            f"{balance:.8f}",
+            f"${price:,.4f}",
+            f"${total_value:,.2f}"
+        ])
+    
+    portfolio_table.align["No"] = "c"
+    portfolio_table.align["Crypto"] = "c"
+    portfolio_table.align["Your Balance"] = "r"
+    portfolio_table.align["Current Price"] = "r"
+    portfolio_table.align["Total Value"] = "r"
+    
+    print(portfolio_table)
+    
+    # Total portfolio value
+    total_crypto_value = sum(item[3] for item in portfolio_items)
+    usdt_balance = wallet.get("USDT", 0)
+    total_portfolio = total_crypto_value + usdt_balance
+    
+    print()
+    summary = PrettyTable()
+    summary.field_names = ["💼 PORTFOLIO SUMMARY", "VALUE"]
+    summary.hrules = 1 
+    summary.add_row(["Crypto Assets", f"${total_crypto_value:,.2f}"])
+    summary.add_row(["USDT Balance", f"${usdt_balance:,.2f}"])
+    summary.add_row(["─────────────", "─────────────"])
+    summary.add_row(["💰 Total Portfolio", f"${total_portfolio:,.2f}"])
+    summary.align["💼 PORTFOLIO SUMMARY"] = "l"
+    summary.align["VALUE"] = "r"
+    print(summary)
+    print()
+    
+    # Input
+    print("─" * 60)
+    crypto = input("🪙 Crypto yang ingin dijual (Symbol): ").upper().strip()
+    
+    if crypto not in available_cryptos:
+        print(f"\n❌ Anda tidak memiliki {crypto} atau saldo 0")
         pause()
         return
     
     try:
-        amount = float(input(f"Jumlah {crypto}: "))
+        current_balance = wallet[crypto]
+        print(f"📦 Saldo {crypto} Anda: {current_balance:.8f}")
         
-        if amount > wallet[crypto]:
-            print(f"\n✗ Saldo tidak cukup! Anda memiliki: {wallet[crypto]:.8f} {crypto}")
+        amount = float(input(f"📦 Jumlah {crypto} yang dijual: "))
+        
+        if amount <= 0:
+            print("\n❌ Jumlah harus lebih dari 0!")
+            pause()
+            return
+        
+        if amount > current_balance:
+            print(f"\n❌ Saldo tidak cukup! Maksimal: {current_balance:.8f} {crypto}")
             pause()
             return
         
         price = db["market_prices"].get(crypto, 0)
         total_receive = amount * price
         
-        print(f"\n{'='*50}")
-        print(f"Ringkasan Order JUAL:")
-        print(f"Crypto    : {crypto}")
-        print(f"Jumlah    : {amount:.8f} {crypto}")
-        print(f"Harga     : ${price:,.4f}")
-        print(f"Total     : ${total_receive:,.2f} USDT")
-        print(f"{'='*50}")
+        # Preview Order dengan PrettyTable
+        print()
+        preview = PrettyTable()
+        preview.field_names = ["📋 SELL ORDER SUMMARY", ""]
+        preview.hrules = 1 
+        preview.add_row(["Crypto", crypto])
+        preview.add_row(["Amount to Sell", f"{amount:.8f} {crypto}"])
+        preview.add_row(["Current Price", f"${price:,.4f}"])
+        preview.add_row(["─────────────", "─────────────"])
+        preview.add_row(["💵 You Will Receive", f"${total_receive:,.2f} USDT"])
+        preview.add_row(["📊 Remaining Balance", f"{current_balance - amount:.8f} {crypto}"])
+        preview.add_row(["💰 New USDT Balance", f"${usdt_balance + total_receive:,.2f}"])
         
-        confirm = input("\nKonfirmasi order? (y/n): ").lower()
+        preview.align["📋 SELL ORDER SUMMARY"] = "l"
+        preview.align[""] = "r"
+        print(preview)
+        print()
+        
+        # Konfirmasi
+        confirm = input("✅ Konfirmasi order SELL? (y/n): ").lower()
         
         if confirm == 'y':
+            # Eksekusi order
             wallet[crypto] -= amount
             wallet["USDT"] = wallet.get("USDT", 0) + total_receive
             
@@ -1323,12 +1504,27 @@ def create_sell_order():
             db["transactions"].append(transaction)
             save_database()
             
-            print("\n✓ Order JUAL berhasil dieksekusi!")
+            # Success message
+            print()
+            success = PrettyTable()
+            success.field_names = ["✅ ORDER EXECUTED SUCCESSFULLY"]
+            success.hrules = 1
+            success.add_row([f"Sold {amount:.8f} {crypto}"])
+            success.add_row([f"Received: ${total_receive:,.2f} USDT"])
+            success.add_row([f"Transaction ID: #{transaction['id']}"])
+            print(success)
         else:
-            print("\n✗ Order dibatalkan")
+            print()
+            cancel = PrettyTable()
+            cancel.field_names = ["❌ ORDER CANCELLED"]
+            cancel.hrules = 1
+            cancel.add_row(["Transaction has been cancelled"])
+            print(cancel)
             
     except ValueError:
-        print("\n✗ Input tidak valid!")
+        print("\n❌ Input tidak valid!")
+    except Exception as e:
+        print(f"\n❌ Error: {e}")
     
     pause()
 
